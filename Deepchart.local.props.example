@@ -1,0 +1,7 @@
+<Project>
+  <!-- Copier ce fichier vers Deepchart.local.props et renseigner votre ID. -->
+  <PropertyGroup>
+    <DeepchartDir>C:\Program Files\Volumetrica Trading\Deepchart\</DeepchartDir>
+    <DeepchartDevId>YOUR-DEV-ID</DeepchartDevId>
+  </PropertyGroup>
+</Project>

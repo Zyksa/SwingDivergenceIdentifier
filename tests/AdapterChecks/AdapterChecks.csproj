@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../Deepchart.local.props" Condition="'$(PublicBuild)' != 'true' And Exists('../../Deepchart.local.props')" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- The SDK is annotated for Windows; this harness runs on Windows. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <DeepchartDir Condition="'$(DeepchartDir)' == ''">C:\Program Files\Volumetrica Trading\Deepchart\</DeepchartDir>
+    <DeepchartLibDir>$([MSBuild]::EnsureTrailingSlash('$(DeepchartDir)'))</DeepchartLibDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/SwingDivergenceIdentifier.csproj" />
+    <Reference Include="VolSysAPI"><HintPath>$(DeepchartLibDir)VolSysAPI.dll</HintPath></Reference>
+    <Reference Include="VolumetricaCore"><HintPath>$(DeepchartLibDir)VolumetricaCore.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

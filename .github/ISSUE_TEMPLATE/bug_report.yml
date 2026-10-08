@@ -1,0 +1,25 @@
+name: Bug report
+description: Structure, CVD, bubbles or local loading issue
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: Deepcharts and indicator versions
+    validations:
+      required: true
+  - type: input
+    id: chart
+    attributes:
+      label: Instrument, bar type and timeframe
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+      description: Include reproduction steps and relevant settings. Do not include developer IDs or account credentials.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Optional screenshot or diagnostic
+      description: Remove account details and private trading information before sharing.

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>SwingDivergenceIdentifier</AssemblyName>
+    <Version>1.0.25</Version>
+    <Authors>zyksa</Authors>
+    <Description>Swing structure points, CVD divergences and execution bubbles for Deepcharts.</Description>
+    <!-- Keep the package description without adding a new reflection attribute to the indicator DLL. -->
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RootNamespace>SwingDivergence</RootNamespace>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType Condition="'$(PublicBuild)' == 'true'">none</DebugType>
+    <DebugSymbols Condition="'$(PublicBuild)' == 'true'">false</DebugSymbols>
+  </PropertyGroup>
+  <Import Project="../Deepchart.local.props" Condition="'$(PublicBuild)' != 'true' And Exists('../Deepchart.local.props')" />
+  <PropertyGroup>
+    <DeepchartDir Condition="'$(DeepchartDir)' == ''">C:\Program Files\Volumetrica Trading\Deepchart\</DeepchartDir>
+    <DeepchartLibDir>$([MSBuild]::EnsureTrailingSlash('$(DeepchartDir)'))</DeepchartLibDir>
+    <DeepchartDevId Condition="'$(DeepchartDevId)' == ''">YOUR-DEV-ID</DeepchartDevId>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="DeepchartDevId" Value="$(DeepchartDevId)" Condition="'$(PublicBuild)' != 'true'" />
+    <Reference Include="VolSysAPI">
+      <HintPath>$(DeepchartLibDir)VolSysAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VolumetricaCore">
+      <HintPath>$(DeepchartLibDir)VolumetricaCore.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Target Name="CheckDeepchartSdk" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(DeepchartLibDir)VolSysAPI.dll') Or !Exists('$(DeepchartLibDir)VolumetricaCore.dll')"
+           Text="SDK Deepcharts absent : VolSysAPI.dll et VolumetricaCore.dll sont nécessaires dans '$(DeepchartLibDir)'. Utilisez -p:DeepchartDir=... pour indiquer le dossier du SDK." />
+    <Warning Condition="'$(PublicBuild)' != 'true' And '$(DeepchartDevId)' == 'YOUR-DEV-ID'"
+             Text="DeepchartDevId non renseigné : cette DLL ne pourra pas être chargée par Deepcharts. Utilisez -p:DeepchartDevId=..." />
+  </Target>
+</Project>
