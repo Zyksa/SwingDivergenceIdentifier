@@ -361,6 +361,17 @@ internal sealed class Divergences(DivergenceOptions options)
         return null;
     }
 
+    // Alerts keep the strict setup contract even for signals drawn with permissive visual options.
+    internal static bool StrictLines(DivergenceSignal signal, IReadOnlyList<MarketFrame> frames,
+        double priceEpsilon, double cvdEpsilon)
+    {
+        if (signal.Weak || signal.Second.Index >= frames.Count) return false;
+        var first = signal.First with { Index = signal.ValueIndex1 >= 0 ? signal.ValueIndex1 : signal.First.Index };
+        var second = signal.Second with { Index = signal.ValueIndex2 >= 0 ? signal.ValueIndex2 : signal.Second.Index };
+        return ClearLine(signal.First, signal.Second, signal.First.Price, signal.Second.Price, frames, false, priceEpsilon)
+            && ClearLine(first, second, signal.Value1, signal.Value2, frames, true, cvdEpsilon);
+    }
+
     internal static bool ClearLine(SwingPoint first, SwingPoint second, double value1, double value2,
         IReadOnlyList<MarketFrame> frames, bool cvd, double epsilon)
     {

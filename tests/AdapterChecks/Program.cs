@@ -5,7 +5,7 @@ using Feed = VolumetricaAPI.Connection.Structure;
 using static VolSysAPI.Structure;
 using static VolSysAPI.ExternalStructure;
 
-int passed = 0;
+int passed = 0, failed = 0;
 Run("Historique : attendre les OHLC finales", () =>
 {
     var host = new Host();
@@ -706,7 +706,7 @@ Run("CVD avec structure : reste actif quand la catégorie rose est désactivée"
     host.Index = 5; indicator.OnTick(new Feed.TickByTick { price = 102, Vol = 1 }, true, default);
     Require(host.PlayedSounds.Count == 1 && host.Messages.Count == 0
         && host.Annotations.Any(a => a.Text?.StartsWith("CVD EXH") == true)
-        && host.Annotations.Where(a => a.AnnotationType == AnnotationType.Line)
+        && host.Annotations.Where(a => a.AnnotationType == AnnotationType.Line && a.Tooltip?.Contains('↑') == true)
             .All(a => a.LineColor.Equals(indicator.BullishColor.WithOpacity(178))), "Les deux catégories restent couplées.");
 });
 Run("CVD : cible trouvée par l'identifiant du Delta Cumulative natif", () =>
@@ -733,9 +733,10 @@ Run("Bulles : couleur, opacité et police des captures conservées au recalcul",
     Require(indicator.DeepBuyColor.Equals(ColorRef.FromRgb(0, 102, 22)) && indicator.TradePlot.StandardDeviation == 2.5
         && indicator.TradePlot.MinimumSize == .2 && indicator.TradePlot.MaximumSize == 25, "Profil des captures différent.");
 });
-Console.WriteLine($"{passed} vérifications de l'adaptateur réussies.");
+Console.WriteLine($"{passed} vérifications de l'adaptateur réussies, {failed} en échec.");
+return failed == 0 ? 0 : 1;
 
-void Run(string name, Action test) { test(); passed++; Console.WriteLine($"OK — {name}"); }
+void Run(string name, Action test) { try { test(); passed++; Console.WriteLine($"OK — {name}"); } catch (Exception e) { failed++; Console.WriteLine($"ECHEC — {name} : {e.Message}"); } }
 static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 
 static (Host Host, SwingDivergence.SwingDivergenceIdentifier Indicator) CvdScenario(bool sound, bool setups, bool replay = false, bool lines = true)

@@ -3,6 +3,8 @@ namespace SwingDivergence.Analysis;
 /// <summary>Structure confluence is measured at the divergence's two price anchors.</summary>
 internal sealed class CvdStructureIndex
 {
+    // Identities only look back across the last few legs; bounded tails keep live ticks O(1).
+    private const int TailLimit = 256;
     private readonly HashSet<(int Index, bool High)> confirmed = new();
     private readonly List<SwingPoint> major = new(), local = new();
 
@@ -14,10 +16,16 @@ internal sealed class CvdStructureIndex
             major.RemoveAll(p => p.Index == old.Index && p.High == old.High);
         }
         confirmed.Add((change.Point.Index, change.Point.High));
-        major.Add(change.Point);
+        Append(major, change.Point);
     }
 
-    public void RecordLocal(SwingChange change) => local.Add(change.Point);
+    public void RecordLocal(SwingChange change) => Append(local, change.Point);
+
+    private static void Append(List<SwingPoint> points, SwingPoint point)
+    {
+        points.Add(point);
+        if (points.Count > TailLimit * 2) points.RemoveRange(0, points.Count - TailLimit);
+    }
 
     public bool HasStructure(DivergenceSignal signal)
         => confirmed.Contains((signal.First.Index, signal.First.High))
@@ -34,6 +42,7 @@ internal sealed class CvdStructureIndex
             var point = points[i];
             if (point.Index >= signal.Second.Index || point.Index >= frames.Count || frames[point.Index].Session != session) continue;
             if (point.High != signal.Second.High && origin < 0) origin = point.Index;
+            if (!structured && origin >= 0) break;
             if (structured && point.High == signal.Second.High) { first = point.Index; break; }
         }
         // Local extrema can move while their intervening leg stays the same.

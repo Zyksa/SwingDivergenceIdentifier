@@ -53,6 +53,8 @@ public partial class SwingDivergenceIdentifier : Indicator
 
     public override void OnLoad()
     {
+        // A recalculation may reuse the annotation group: drop what the previous pass drew.
+        RemoveTrackedDrawings();
         tradeHistory.ResetContext(TradeContext());
         cvdStructure = new(); knownCvdSignals.Clear(); notifiedCvdPairs.Clear();
         reconstructedKey = null; reconstructedSequence = 0; SeedTradeSizeScale();

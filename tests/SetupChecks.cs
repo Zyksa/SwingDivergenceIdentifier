@@ -342,6 +342,14 @@ internal static class SetupChecks
             Require(!gate.Accept(setup.Signal.Id, true, false, false, 5, 5, now, 0), "Historique réalerté.");
             Require(!gate.Accept("catchup", true, false, false, 5, 6, now, 0), "Rattrapage ancien alerté.");
         });
+        Check("Alertes : la ligne CVD traversée reste refusée même si le tracé l'autorise", () =>
+        {
+            var data = Fixture(); var setup = Detect(data).Single();
+            Require(Divergences.StrictLines(setup.Signal, data, .25, 1), "Setup strict refusé par le contrôle d'alerte.");
+            var cut = data.ToList(); cut[3] = cut[3] with { CvdLow = -200, CvdHigh = 200 };
+            Require(!Divergences.StrictLines(setup.Signal, cut, .25, 1), "Ligne CVD traversée acceptée pour une alerte.");
+            Require(!Divergences.StrictLines(setup.Signal with { Weak = true }, data, .25, 1), "Signal faible accepté pour une alerte.");
+        });
         return passed;
     }
 

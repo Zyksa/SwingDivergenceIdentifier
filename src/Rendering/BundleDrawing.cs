@@ -349,6 +349,16 @@ public partial class SwingDivergenceIdentifier
         }
     }
 
+    private void RemoveTrackedDrawings()
+    {
+        if (annotations == null) return;
+        ClearLivePreview();
+        foreach (var drawing in structureBubbles) RemoveItems(drawing.Items);
+        foreach (var drawing in divergenceDrawings) RemoveItems(drawing.Items);
+        foreach (var drawing in deepDrawings) RemoveItems(drawing.Items);
+        if (diagnostic != null) annotations.RemoveAnnotation(diagnostic);
+    }
+
     private IAnnotation AddText(double x, double y, string text, ColorRef color, int size, string tooltip)
     {
         var label = VAn.CreateAnnotation(AnnotationType.Text); Place(label, x, y);

@@ -65,7 +65,8 @@ public partial class SwingDivergenceIdentifier
             if (change.Removed is SwingPoint old) matches |= signal.First.Index == old.Index || signal.Second.Index == old.Index;
             if (!matches) continue;
             if (ShowCvdDivergences || ShowCvdSetups) DrawDivergence(signal, false, refresh: true);
-            if (!live || !ShowCvdSetups || availableAt - signal.Second.Index > DirectionalBars) continue;
+            if (!live || !ShowCvdSetups || availableAt - signal.Second.Index > DirectionalBars
+                || !Divergences.StrictLines(signal, frames, PriceToleranceTicks * tickSize, CvdTolerance)) continue;
             var candidate = localCvdSetups.Preview(signal with { ConfirmedAt = availableAt }, frames);
             if (candidate.HasValue)
                 SoundCvd(candidate.Value.Signal, availableAt, live, "Div Cvd avec structure");
