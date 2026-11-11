@@ -95,6 +95,11 @@ Un point intermédiaire ou une autre mèche de la même bougie ne suffit pas.
   enregistrée supérieure. Un réglage plus court reste possible.
 - Même session, contrôles de traversée de lignes et alignement sur des bougies
   déjà closes. La ligne du panneau CVD utilise les indices réels des échantillons.
+- **Écart CVD minimum** (Avancé → Divergences : réglages avancés, défaut **0,5**) : l'écart de CVD
+  entre les deux pivots doit dépasser 0,5 fois le delta moyen absolu par bougie
+  entre ces pivots, en plus de la **Tolérance CVD** fixe. Une divergence de
+  quelques contrats sur des bougies à plusieurs centaines de delta n'est plus
+  tracée ni alertée. `0` revient à la seule tolérance fixe.
 
 Le panneau sélectionné doit contenir un CVD avec le même cumul de session et des
 volumes Ask/Bid sans filtre. RSI/MACD restent sélectionnables en option.
@@ -139,10 +144,17 @@ avec des ancres issues de la structure sélectionnée :
   faibles sont exclus. Les lignes de prix et de CVD ne doivent pas traverser les
   ranges des bougies intermédiaires, mèches comprises. Une donnée CVD manquante
   ou non finie bloque la validation.
+- **Invalidation** : dès qu'une bougie dépasse le second extrême de la
+  divergence (sous le creux pour un achat, au-dessus du sommet pour une vente,
+  au-delà de la tolérance de prix), le setup est abandonné. Un BOS ou une
+  promotion structurelle ultérieurs ne peuvent plus l'alerter ; seule une
+  nouvelle paire de pivots peut produire un setup.
 
 L'alerte part **sur le premier tick qui satisfait les conditions du setup**.
 Le tracé apparaît immédiatement sur le prix et le CVD : ligne pointillée et
 libellé **EXH/ABS ?**, avec un message **« Setup Div Cvd précoce (provisoire) »**.
+La popup indique aussi les deux ancres, le prix du second extrême et l'écart
+de CVD, par exemple `· HH → LH @ 114 · ΔCVD +15`.
 Le tracé suit les nouvelles valeurs et disparaît si la condition s'invalide.
 La notification déjà émise ne peut pas être annulée. Une seule notification est
 autorisée pour le même mouvement, même si son extrême change de bougie, si la

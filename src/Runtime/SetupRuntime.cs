@@ -39,6 +39,16 @@ public partial class SwingDivergenceIdentifier
         if (string.IsNullOrWhiteSpace(sound) && CvdSound.ListElements?.Count > 0) sound = CvdSound.ListElements[0];
         if (category.PlaySound && !string.IsNullOrWhiteSpace(sound)) VAn.PlayAlert(sound);
         if (category.ShowPopup)
-            VAn.ShowMessage($"{VAn.SymbolName} — {reason} {(signal.Bullish ? "haussier" : "baissier")} ({(signal.Hidden ? "ABS" : "EXH")})", IndicatorName);
+            VAn.ShowMessage($"{VAn.SymbolName} — {reason} {(signal.Bullish ? "haussier" : "baissier")} ({(signal.Hidden ? "ABS" : "EXH")})"
+                + AlertDetails(signal), IndicatorName);
+    }
+
+    // Anchors, price and CVD change let the trader judge the setup without opening the chart.
+    private static string AlertDetails(DivergenceSignal signal)
+    {
+        string first = string.IsNullOrEmpty(signal.First.Label) ? "?" : signal.First.Label;
+        string second = string.IsNullOrEmpty(signal.Second.Label) ? "?" : signal.Second.Label;
+        string cvd = (signal.Value2 - signal.Value1).ToString("+#,0;-#,0;0");
+        return $" · {first} → {second} @ {signal.Second.Price:0.#####} · ΔCVD {cvd}";
     }
 }

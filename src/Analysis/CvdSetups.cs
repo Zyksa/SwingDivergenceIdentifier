@@ -201,7 +201,8 @@ internal sealed class CvdSetups(SetupOptions options)
             var setup = TryConfirm(signal, frames);
             if (setup.HasValue) { output.Add(setup.Value); waiting.RemoveAt(i); }
             else if (frames.Count - 1 > signal.ConfirmedAt + options.WaitingBars
-                || frames[^1].Session != frames[signal.Second.Index].Session)
+                || frames[^1].Session != frames[signal.Second.Index].Session
+                || InvalidatedBy(signal, frames, frames.Count - 1) >= 0)
                 waiting.RemoveAt(i);
         }
         return output;
@@ -236,6 +237,8 @@ internal sealed class CvdSetups(SetupOptions options)
                 for (int i = signal.Second.Index + 1; i <= end; i++)
                 {
                     if (frames[i].Session != frames[signal.Second.Index].Session) break;
+                    // OHLC has no intrabar order: a bar that both breaks the extreme and the level is refused.
+                    if (Breaks(signal, frames[i])) return null;
                     double buffer = Math.Max(options.PriceEpsilon, (frames[i].Atr ?? 0) * 0.05);
                     if (signal.Bullish ? frames[i].Close > level + buffer : frames[i].Close < level - buffer)
                     { at = Math.Max(i, signal.ConfirmedAt); break; }
@@ -244,6 +247,7 @@ internal sealed class CvdSetups(SetupOptions options)
                 reason = "BOS confirmé";
             }
         }
+        if (InvalidatedBy(signal, frames, at) >= 0) return null;
         double entry = frames[at].Close;
         double bufferStop = Math.Max(options.MinimumStop, (frames[signal.Second.Index].Atr ?? 0) * options.StopAtr);
         double stop = signal.Second.Price + (signal.Bullish ? -bufferStop : bufferStop);
@@ -259,6 +263,19 @@ internal sealed class CvdSetups(SetupOptions options)
         double target = entry + (signal.Bullish ? 1 : -1) * risk * options.RewardRisk;
         if (options.TickSize > 0) target = Math.Round(target / options.TickSize) * options.TickSize;
         return new CvdSetup(signal, at, entry, stop, target, options.RewardRisk, reason);
+    }
+
+    // A divergence no longer exists once price trades beyond its second extreme.
+    private bool Breaks(DivergenceSignal signal, MarketFrame bar) => signal.Bullish
+        ? bar.Low < signal.Second.Price - options.PriceEpsilon
+        : bar.High > signal.Second.Price + options.PriceEpsilon;
+
+    /// <summary>First bar after the second anchor, up to <paramref name="through"/>, that breaks its extreme; -1 if intact.</summary>
+    internal int InvalidatedBy(DivergenceSignal signal, IReadOnlyList<MarketFrame> frames, int through)
+    {
+        for (int i = signal.Second.Index + 1; i <= Math.Min(through, frames.Count - 1); i++)
+            if (Breaks(signal, frames[i])) return i;
+        return -1;
     }
 }
 

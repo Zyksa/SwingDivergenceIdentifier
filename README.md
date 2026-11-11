@@ -137,8 +137,10 @@ structure, filtering and notification behavior.
 Confirmed structure uses closed candles. Forming structure points can move or
 disappear. Setup detection uses the same alternating swings as the chart points,
 samples CVD on the exact price-pivot candles and requires both price
-and CVD lines to remain clear of intervening candle ranges. Weak signals and
-missing CVD data are rejected. Divergence display settings do not relax these
+and CVD lines to remain clear of intervening candle ranges. The CVD change must
+also exceed 0.5 times the mean absolute bar delta between the pivots (configurable,
+0 disables). A setup is abandoned as soon as price trades beyond its second
+extreme. Weak signals and missing CVD data are rejected. Divergence display settings do not relax these
 alert requirements. A tick snapshot evaluates the active swing of the selected
 structure engine without committing provisional points to closed history.
 Hiding the structure labels does not stop the setup detector.

@@ -530,6 +530,7 @@ Run("Absorption baissière : mêmes HH/HL/LH que le graphique, même lorsque leu
     host.Bars[8].VolTotList = currentTotals; host.Index = 8;
     indicator.OnTick(new Feed.TickByTick { price = 113, Vol = 1 }, true, default);
     Require(host.Messages.Count == 1 && host.Messages[0].Contains("baissier (ABS)")
+        && host.Messages[0].Contains(" → ") && host.Messages[0].Contains("ΔCVD +")
         && host.Annotations.Any(a => a.Text?.StartsWith("CVD ABS") == true)
         && indicator.CvdSetupStatus.Contains("ABS baissière"), "LH prix / HH CVD non détecté avec les vagues affichées.");
     indicator.OnTick(new Feed.TickByTick { price = 113.25, Vol = 1 }, true, default);

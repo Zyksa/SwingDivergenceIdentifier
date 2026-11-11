@@ -285,6 +285,8 @@ public partial class SwingDivergenceIdentifier
         MacdSignal = Math.Clamp(MacdSignal, 1, 200);
         OscillatorAlignmentBars = Math.Clamp(OscillatorAlignmentBars, 0, Math.Min(RightBars, MinorRightBars));
         CvdTolerance = Math.Max(0, CvdTolerance); OscillatorTolerance = Math.Max(0, OscillatorTolerance);
+        DivergenceExpert.CvdMinimumDeltaRatio = double.IsFinite(DivergenceExpert.CvdMinimumDeltaRatio)
+            ? Math.Clamp(DivergenceExpert.CvdMinimumDeltaRatio, 0, 5) : 0.5;
         MaxDivergences = Math.Clamp(MaxDivergences, 1, 1000); CvdPanelNumber = Math.Clamp(CvdPanelNumber, 2, 20);
         DeepTradeMinimum = Math.Max(1, DeepTradeMinimum); DeepTradePercentile = Math.Clamp(DeepTradePercentile, 0, 100);
         DeepTradeSample = Math.Clamp(DeepTradeSample, 50, 10000); DeepAggregationMs = Math.Clamp(DeepAggregationMs, 0, 1000);
@@ -375,6 +377,8 @@ public class DivergenceExpert
     public int DivergenceMaxBars { get; set; } = 12;
     [DisplayName("Tolérance CVD")]
     public double CvdTolerance { get; set; } = 1;
+    [DisplayName("Écart CVD minimum (× delta moyen par bougie, 0 = off)")]
+    public double CvdMinimumDeltaRatio { get; set; } = 0.5;
     [DisplayName("Tolérance RSI / MACD")]
     public double OscillatorTolerance { get; set; } = 0.25;
     [DisplayName("Ligne de prix sans traversée de bougie")]

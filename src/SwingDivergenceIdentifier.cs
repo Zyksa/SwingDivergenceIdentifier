@@ -104,7 +104,8 @@ public partial class SwingDivergenceIdentifier : Indicator
         var options = new DivergenceOptions(false, ShowTechnicalDivergences, Oscillator,
             CvdAtClose, ShowHiddenDivergences, ShowWeakCvdDivergences, DivergenceMaxBars, epsilon,
             CvdTolerance, OscillatorTolerance, RequireClearPriceLine, RequireClearCvdLine,
-            RequireHiddenTrend, RequireTechnicalValidation, ValidationBars, OscillatorAlignmentBars);
+            RequireHiddenTrend, RequireTechnicalValidation, ValidationBars, OscillatorAlignmentBars,
+            DivergenceExpert.CvdMinimumDeltaRatio);
         majorDivergences = new Divergences(options);
         minorDivergences = new Divergences(options);
         cvdDivergences = new Divergences(options with { Cvd = NeedsCvd, Technical = false,

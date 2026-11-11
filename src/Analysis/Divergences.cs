@@ -18,8 +18,10 @@ internal readonly struct DivergenceOptions : IEquatable<DivergenceOptions>
     public bool ValidateTechnical { get; init; }
     public int ValidationBars { get; init; }
     public int AlignmentBars { get; init; }
+    /// <summary>Minimum |ΔCVD| as a multiple of the mean absolute bar delta between the anchors; 0 disables.</summary>
+    public double CvdRelative { get; init; }
 
-    public DivergenceOptions(bool Cvd, bool Technical, TechnicalOscillator Oscillator, bool CvdClose, bool Hidden, bool Weak, int MaximumGap, double PriceEpsilon, double CvdEpsilon, double OscillatorEpsilon, bool ClearPrice, bool ClearCvd, bool HiddenTrend, bool ValidateTechnical, int ValidationBars, int AlignmentBars)
+    public DivergenceOptions(bool Cvd, bool Technical, TechnicalOscillator Oscillator, bool CvdClose, bool Hidden, bool Weak, int MaximumGap, double PriceEpsilon, double CvdEpsilon, double OscillatorEpsilon, bool ClearPrice, bool ClearCvd, bool HiddenTrend, bool ValidateTechnical, int ValidationBars, int AlignmentBars, double CvdRelative = 0)
     {
         this.Cvd = Cvd;
         this.Technical = Technical;
@@ -37,6 +39,7 @@ internal readonly struct DivergenceOptions : IEquatable<DivergenceOptions>
         this.ValidateTechnical = ValidateTechnical;
         this.ValidationBars = ValidationBars;
         this.AlignmentBars = AlignmentBars;
+        this.CvdRelative = CvdRelative;
     }
 
     public bool Equals(DivergenceOptions other) =>
@@ -55,7 +58,8 @@ internal readonly struct DivergenceOptions : IEquatable<DivergenceOptions>
         EqualityComparer<bool>.Default.Equals(HiddenTrend, other.HiddenTrend) &&
         EqualityComparer<bool>.Default.Equals(ValidateTechnical, other.ValidateTechnical) &&
         EqualityComparer<int>.Default.Equals(ValidationBars, other.ValidationBars) &&
-        EqualityComparer<int>.Default.Equals(AlignmentBars, other.AlignmentBars);
+        EqualityComparer<int>.Default.Equals(AlignmentBars, other.AlignmentBars) &&
+        EqualityComparer<double>.Default.Equals(CvdRelative, other.CvdRelative);
 
     public override bool Equals(object obj) => obj is DivergenceOptions other && Equals(other);
     public static bool operator ==(DivergenceOptions left, DivergenceOptions right) => left.Equals(right);
@@ -82,6 +86,7 @@ internal readonly struct DivergenceOptions : IEquatable<DivergenceOptions>
             hash = hash * 31 + EqualityComparer<bool>.Default.GetHashCode(ValidateTechnical);
             hash = hash * 31 + EqualityComparer<int>.Default.GetHashCode(ValidationBars);
             hash = hash * 31 + EqualityComparer<int>.Default.GetHashCode(AlignmentBars);
+            hash = hash * 31 + EqualityComparer<double>.Default.GetHashCode(CvdRelative);
             return hash;
         }
     }
@@ -106,7 +111,7 @@ internal readonly struct DivergenceOptions : IEquatable<DivergenceOptions>
         AlignmentBars = this.AlignmentBars;
     }
 
-    public override string ToString() => $"DivergenceOptions {{ Cvd = {Cvd}, Technical = {Technical}, Oscillator = {Oscillator}, CvdClose = {CvdClose}, Hidden = {Hidden}, Weak = {Weak}, MaximumGap = {MaximumGap}, PriceEpsilon = {PriceEpsilon}, CvdEpsilon = {CvdEpsilon}, OscillatorEpsilon = {OscillatorEpsilon}, ClearPrice = {ClearPrice}, ClearCvd = {ClearCvd}, HiddenTrend = {HiddenTrend}, ValidateTechnical = {ValidateTechnical}, ValidationBars = {ValidationBars}, AlignmentBars = {AlignmentBars} }}";
+    public override string ToString() => $"DivergenceOptions {{ Cvd = {Cvd}, Technical = {Technical}, Oscillator = {Oscillator}, CvdClose = {CvdClose}, Hidden = {Hidden}, Weak = {Weak}, MaximumGap = {MaximumGap}, PriceEpsilon = {PriceEpsilon}, CvdEpsilon = {CvdEpsilon}, OscillatorEpsilon = {OscillatorEpsilon}, ClearPrice = {ClearPrice}, ClearCvd = {ClearCvd}, HiddenTrend = {HiddenTrend}, ValidateTechnical = {ValidateTechnical}, ValidationBars = {ValidationBars}, AlignmentBars = {AlignmentBars}, CvdRelative = {CvdRelative} }}";
 }
 
 internal readonly struct DivergenceSignal : IEquatable<DivergenceSignal>
@@ -265,9 +270,20 @@ internal sealed class Divergences(DivergenceOptions options)
         { LastCheck = $"Mesures {source} indisponibles ou ancres hors de l'écart maximal."; return; }
         double value1 = sample1.Value.Value, value2 = sample2.Value.Value;
         double eps = source == "CVD" ? options.CvdEpsilon : options.OscillatorEpsilon;
+        // Line clearance keeps the absolute tolerance; only the divergence magnitude scales with activity.
+        double significance = eps;
+        if (source == "CVD" && options.CvdRelative > 0)
+            significance = Math.Max(eps, options.CvdRelative * MeanAbsoluteDelta(first.Index, second.Index, frames));
         string kind = Classify(second.High, second.Price - first.Price, value2 - value1,
-            options.PriceEpsilon, eps, options.Weak && source == "CVD");
-        if (kind == null) { LastCheck = "Prix et CVD sans mouvement opposé suffisant (tolérances)."; return; }
+            options.PriceEpsilon, significance, options.Weak && source == "CVD");
+        if (kind == null)
+        {
+            LastCheck = significance > eps && Classify(second.High, second.Price - first.Price, value2 - value1,
+                    options.PriceEpsilon, eps, options.Weak) != null
+                ? $"Écart CVD {Math.Abs(value2 - value1):0.#} inférieur au minimum ({options.CvdRelative:0.##} × delta moyen = {significance:0.#})."
+                : "Prix et CVD sans mouvement opposé suffisant (tolérances).";
+            return;
+        }
         bool hidden = kind.StartsWith("Hidden");
         if (hidden && !options.Hidden) { LastCheck = "Absorptions / divergences cachées désactivées."; return; }
         if (hidden && source != "CVD" && options.HiddenTrend)
@@ -282,7 +298,7 @@ internal sealed class Divergences(DivergenceOptions options)
             second with { Index = sample2.Value.Index }, value1, value2, frames, true, eps))
         { LastCheck = "Ligne CVD traversée par une bougie intermédiaire ou données CVD manquantes."; return; }
         LastCheck = $"{(hidden ? "ABS" : "EXH")} {(second.High ? "baissière" : "haussière")} admissible.";
-        bool weak = Math.Abs(second.Price - first.Price) <= options.PriceEpsilon || Math.Abs(value2 - value1) <= eps;
+        bool weak = Math.Abs(second.Price - first.Price) <= options.PriceEpsilon || Math.Abs(value2 - value1) <= significance;
         var signal = new DivergenceSignal($"{source}:{(second.High ? "H" : "L")}:{kind}:{first.Index}:{second.Index}", source, kind,
             first, second, value1, value2, !second.High, hidden, weak, second.ConfirmedAt, "Pivots confirmés",
             sample1.Value.Index, sample2.Value.Index);
@@ -347,6 +363,19 @@ internal sealed class Divergences(DivergenceOptions options)
             { best = sample; bestIndex = i; }
         }
         return best.HasValue ? (bestIndex, best.Value) : null;
+    }
+
+    /// <summary>Mean |close − open| CVD per bar over [from, to]; bars without finite CVD are skipped.</summary>
+    internal static double MeanAbsoluteDelta(int from, int to, IReadOnlyList<MarketFrame> frames)
+    {
+        double total = 0; int count = 0;
+        for (int i = Math.Max(0, from); i <= Math.Min(to, frames.Count - 1); i++)
+        {
+            if (frames[i].CvdOpen is not double open || frames[i].CvdClose is not double close
+                || !double.IsFinite(open) || !double.IsFinite(close)) continue;
+            total += Math.Abs(close - open); count++;
+        }
+        return count == 0 ? 0 : total / count;
     }
 
     internal static string Classify(bool high, double priceChange, double valueChange, double priceEps, double valueEps, bool weak)

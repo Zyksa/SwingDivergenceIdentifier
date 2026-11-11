@@ -245,6 +245,45 @@ internal static class SetupChecks
             closed.Add(current); var final = engine.Add(current, closed).Single();
             Require(engine.AlertIdentity(final.Signal) == identity, "BOS final crée une deuxième alerte.");
         });
+        Check("Setup invalidé : extrême de la divergence cassé avant le BOS", () =>
+        {
+            var options = SetupOptions() with { Confirmation = SetupConfirmation.BosOuBalayage, Bearish = false };
+            var data = Fixture();
+            // The low at 88 is broken (87) before price closes above the 108 BOS level.
+            data.Add(Row(6, 102, 103, 87, 95, 2, 2, -15, -12));
+            Require(Detect(data, options).Count == 0, "Setup publié sur la bougie qui casse son extrême.");
+            var forming = Row(7, 95, 111, 95, 110, -12, 5, -12, 4);
+            var engine = Engine(options); var closed = new List<MarketFrame>();
+            foreach (var frame in data) { closed.Add(frame); engine.Add(frame, closed); }
+            Require(engine.Preview(forming, closed.Append(forming).ToArray()).All(s => s.Signal.Second.Index != 4),
+                "Aperçu BOS d'une divergence déjà invalidée.");
+            data.Add(forming);
+            Require(Detect(data, options).All(s => s.Signal.Second.Index != 4), "BOS tardif d'une divergence invalidée.");
+            var gate = new CvdSetups(SetupOptions());
+            var signal = Detect(Fixture()).Single().Signal;
+            Require(gate.Preview(signal with { ConfirmedAt = 6 }, data) == null,
+                "Promotion tardive d'une divergence dont l'extrême est cassé.");
+            Require(gate.Preview(signal with { ConfirmedAt = 5 }, data).HasValue, "Divergence intacte refusée.");
+        });
+        Check("Écart CVD relatif : divergence négligeable face au delta moyen refusée", () =>
+        {
+            // Fixture: CVD lows -20 → -10 (Δ 10); mean |delta| over bars 2..4 is (20 + 10 + 8) / 3 ≈ 12.7.
+            List<CvdSetup> Run(double ratio)
+            {
+                var engine = new StructuralCvdSetups(.5, 3, EngineOptions() with { CvdRelative = ratio }, SetupOptions());
+                var frames = new List<MarketFrame>(); var result = new List<CvdSetup>();
+                foreach (var bar in Fixture()) { frames.Add(bar); result.AddRange(engine.Add(bar, frames)); }
+                Require(ratio < 1 || engine.LastCheck.Contains("delta moyen"), "Refus relatif inexpliqué.");
+                return result;
+            }
+            Require(Run(0).Count == 1 && Run(.5).Count == 1, "Écart CVD significatif refusé.");
+            Require(Run(1).Count == 0, "Écart CVD inférieur au delta moyen accepté.");
+            var missing = Fixture(); missing[3] = missing[3] with { CvdOpen = null };
+            var engine = new StructuralCvdSetups(.5, 3, EngineOptions() with { CvdRelative = .5 }, SetupOptions());
+            var prefix = new List<MarketFrame>(); var found = new List<CvdSetup>();
+            foreach (var bar in missing) { prefix.Add(bar); found.AddRange(engine.Add(bar, prefix)); }
+            Require(found.Count == 1, "Une bougie sans ouverture CVD bloque le calcul du delta moyen.");
+        });
         Check("Setup structurel : un creux qui évolue ne produit pas d'alertes en formation", () =>
         {
             var data = Fixture().Take(5).ToList();
@@ -354,8 +393,9 @@ internal static class SetupChecks
     }
 
     private static StructuralCvdSetups Engine(SetupOptions? setup = null) => new(.5, 3,
-        new(true, false, TechnicalOscillator.Rsi, false, false, true, 12, .25, 1, .25,
-            false, false, false, false, 20, 1), setup ?? SetupOptions());
+        EngineOptions(), setup ?? SetupOptions());
+    private static DivergenceOptions EngineOptions() => new(true, false, TechnicalOscillator.Rsi, false, false, true,
+        12, .25, 1, .25, false, false, false, false, 20, 1);
     private static DivergenceOptions SharedOptions() => new(true, false, TechnicalOscillator.Rsi, false,
         true, false, 12, .25, 1, .25, true, true, false, false, 20, 0);
     private static (StructuralCvdSetups Engine, AlternatingLegs Waves, List<MarketFrame> Closed) SharedScenario()
