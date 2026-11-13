@@ -21,7 +21,18 @@ le calcul est actuellement disponible **côté client uniquement**.
 4. **Visibility** :
    - **Private** : uniquement le propriétaire du package.
    - **Public** : les utilisateurs qui ont rejoint le lien développeur.
-5. Préparer le dossier à envoyer depuis la racine du projet :
+5. **Recommandé : un seul fichier.** La boîte de dialogue Windows peut tronquer
+   une sélection de 30 fichiers sans prévenir ; la compilation échoue alors sur
+   des types absents (`VAn`, `SetupExpert`, `TradeSizeScale`…). Générer plutôt :
+
+   ```powershell
+   pwsh -File scripts/Export-DeepchartsPackage.ps1 -SingleFile
+   ```
+
+   et sélectionner uniquement
+   **`dist/swing-divergence-identifier-deepcharts-single/SwingDivergenceIdentifierPackage.cs`**
+   (environ 200 Ko, compilable seul avec le SDK). Sinon, préparer le dossier
+   multi-fichiers depuis la racine du projet :
 
    ```powershell
    pwsh -File scripts/Export-DeepchartsPackage.ps1
